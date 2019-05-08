@@ -131,7 +131,7 @@ addtodo(int priority, char *content) {
 	return i;
 }
 
-static int
+static void
 loadrsrcs(void) {
 	struct stat st = {0};
 	FILE *fp;
@@ -233,7 +233,7 @@ deletetodo(int idx) {
 	todo.items[--todo.size] = NULL;
 }
 
-static int
+static void
 saversrcs(void) {
 	int i;
 	FILE *fp;
@@ -472,6 +472,7 @@ parsedate(char *date, struct tm *dest) {
 	dest->tm_year = tmp - 1990;
 
 	tmp = atoi(day);
+	/* Look ik this is not the best test but whatever i need to finish this shit */
 	if (tmp < 1 || tmp > 31)
 		return 0;
 
@@ -481,6 +482,9 @@ parsedate(char *date, struct tm *dest) {
 	if (tmp < 1 || tmp > 12)
 		return 0;
 	dest->tm_mon = tmp - 1;
+	dest->tm_sec = dest->tm_min = dest->tm_hour = 0;
+	dest->tm_isdst = 1;
+
 	return 1;
 }
 
@@ -522,14 +526,22 @@ main(int argc, char *argv[]) {
 			printf("%d %s\n", todo.items[i]->priority, todo.items[i]->content);
 		return 0;
 	case 'e':
-		// TODO: MORE TO GO HERE!!!
+		/* NOTE: Shit aint working nigga!! */
+		if (!parsedate(EARGF(usage()), &tm_st))
+			die("date is not properly formatted!\n");
+		printf("%d %d %d\n", tm_st.tm_year, tm_st.tm_mday, tm_st.tm_mon);
+		tm_i = mktime(&tm_st);
+
 		for (this = events.head; this; this = this->next) {
-			//localtime_r(&this->from,
-			//printf("%s %d:%d:%d ", this->content, );
-			//printf("-> %d:%d:%d ", this->content, );
+			if (tm_i >= this->from && tm_i < this->to)
+				printf("%s %02d:%02d -> %02d:%02d\n", this->content, localtime(&this->from)->tm_hour,
+						localtime(&this->from)->tm_min, localtime(&this->to)->tm_hour,
+						localtime(&this->to)->tm_min);
 		}
 		return 0;
 	case 'T':
+		if (argc < 3)
+			usage();
 		desc = EARGF(usage());
 			priority = EARGF(usage());
 		priority = EARGF(usage());
@@ -541,11 +553,13 @@ main(int argc, char *argv[]) {
 			die("check your parameters!\n");
 		return 0;
 	case 'E':
+		if (argc < 4)
+			usage();
 		return 0;
 	case 's':
 		tm_i = time(NULL);
 		for (this = events.head; this; this = this->next)
-			if (tm_i >= this->from && tm_i <= this->to)
+			if (tm_i >= this->from && tm_i < this->to)
 				printf("%s %02d:%02d -> %02d:%02d\n", this->content, localtime(&this->from)->tm_hour,
 						localtime(&this->from)->tm_min, localtime(&this->to)->tm_hour,
 						localtime(&this->to)->tm_min);
@@ -556,7 +570,7 @@ main(int argc, char *argv[]) {
 
 	if (argc < 1) {
 		terminit(get_event_strt_mon, get_event_for_day, get_todos);
-		setuptimer();
+		//setuptimer();
 		run();
 		termend();
 	}

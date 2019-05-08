@@ -5,6 +5,8 @@ include config.mk
 SRC = scas.c ui.c
 OBJ = $(SRC:.c=.o)
 
+override CFLAGS += -Wall
+
 all: options scas
 
 options:
