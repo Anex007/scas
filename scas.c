@@ -1,9 +1,11 @@
 #include <ncurses.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
 #include <ctype.h>
@@ -142,7 +144,7 @@ loadrsrcs(void) {
 	if (stat(DIR, &st) < 0 && mkdir(DIR, 0755) < 0)
 		die("Unable to read or create directory for saving data\n");
 
-	if (fp = fopen(eventfname, "r")) {
+	if ((fp = fopen(eventfname, "r"))) {
 		while (fgets(line, 256, fp)) {
 			for (_line = line; isspace(*_line); _line++);
 			//if (!(*_line) || sscanf(_line, "%u %u %256s", &from, &to, content) != 3)
@@ -159,7 +161,7 @@ loadrsrcs(void) {
 		fclose(fp);
 	}
 
-	if (fp = fopen(todofname, "r")) {
+	if ((fp = fopen(todofname, "r"))) {
 		while (fgets(line, 256, fp)) {
 			for (_line = line; isspace(*_line); _line++);
 			//if (!(*_line) || sscanf(_line, "%d %256s", &priority, content) != 2)
@@ -243,7 +245,7 @@ saversrcs(void) {
 		die("unable to write to eventfile\n");
 
 	while (_event) {
-		fprintf(fp, "%u %u %s\n", _event->from, _event->to, _event->content);
+		fprintf(fp, "%lu %lu %s\n", _event->from, _event->to, _event->content);
 		_event = _event->next;
 	}
 	fclose(fp);
@@ -508,6 +510,23 @@ parsetime(char *time, struct tm *dest) {
 	return 1;
 }
 
+void
+setuptimer(void) {
+	struct sigaction sa = {0};
+	struct itimerval timer = {0};
+
+	timer.it_interval.tv_sec = 60;
+	timer.it_value.tv_sec = 60 - time(NULL) % 60;
+
+	sa.sa_handler = updateclock;
+	if (sigaction(SIGALRM, &sa, NULL) == -1)
+		die("sigaction error\n");
+
+	if (setitimer(ITIMER_REAL, &timer, NULL) == -1)
+		die("setitimer error\n");
+
+}
+
 int
 main(int argc, char *argv[]) {
 	int i;
@@ -516,6 +535,7 @@ main(int argc, char *argv[]) {
 	struct tm tm_st;
 	char *desc = NULL;
 	char *priority = NULL;
+	char **_argv = argv;
 
 	todolistnew();
 	loadrsrcs();
@@ -542,20 +562,16 @@ main(int argc, char *argv[]) {
 	case 'T':
 		if (argc < 3)
 			usage();
-		desc = EARGF(usage());
-			priority = EARGF(usage());
-		priority = EARGF(usage());
-		priority = EARGF(usage());
-		priority = EARGF(usage());
-		priority = EARGF(usage());
+		desc = _argv[2];
+		priority = _argv[3];
 		printf("#%s, %s\n", desc, priority);
 		if ((i = atoi(priority)) < 1 || addtodo(i, desc) < 0)
 			die("check your parameters!\n");
-		return 0;
+		break;
 	case 'E':
 		if (argc < 4)
 			usage();
-		return 0;
+		break;
 	case 's':
 		tm_i = time(NULL);
 		for (this = events.head; this; this = this->next)
@@ -566,11 +582,12 @@ main(int argc, char *argv[]) {
 		return 0;
 	default:
 		usage();
+		return 1;
 	} ARGEND;
 
 	if (argc < 1) {
 		terminit(get_event_strt_mon, get_event_for_day, get_todos);
-		//setuptimer();
+		setuptimer();
 		run();
 		termend();
 	}

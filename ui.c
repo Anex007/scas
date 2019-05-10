@@ -97,7 +97,6 @@ void
 terminit(event_due_cb _duecb, event4day _daycb, gettodocb _todocb) {
 	int width, height;
 	const char *titles[3] = { "Calender", "Events", "Todo" };
-	int i;
 
 	initscr();
 	noecho();
@@ -190,8 +189,8 @@ getdofw(int y, int m, int d) {
 static inline void
 clearwindow(WINDOW *win, int y, int x, int height, int width) {
 	int _y, _x;
-	for (int _y = 0; _y < height; _y++) {
-		for (int _x = 0; _x < width; _x++) {
+	for (_y = 0; _y < height; _y++) {
+		for (_x = 0; _x < width; _x++) {
 			mvwaddch(win, y+_y, x+_x, ' ');
 		}
 	}
@@ -392,7 +391,7 @@ updatekeybindwin(void) {
 void
 updateevents(void) {
 	EventElm *events, *cur_event;
-	int i, yoff = 3, xoff = 1, selection;
+	int i, yoff = 3, xoff = 1, selection = -1;
 	struct tm tm_st;
 	WINDOW *event = ui.windows[EVENT_WIN];
 
@@ -425,7 +424,7 @@ updateevents(void) {
 
 void
 updatetodo(void) {
-	int i, yoff = 3, xoff = 1, selection;
+	int i, yoff = 3, xoff = 1, selection = -1;
 	Todo *todo_hd = todocb(&ui.numtodos), *cur_todo = NULL;
 	WINDOW *todo = ui.windows[TODO_WIN];
 
@@ -459,6 +458,15 @@ updatetime(void) {
 	loadclock(&tm_st);
 	loadcalender(&tm_st, duecb(tm_st.tm_mon));
 	updatetodo();
+}
+
+void
+updateclock(int useless) {
+	struct tm tm_st;
+
+	cur_time = time(NULL);
+	localtime_r(&cur_time, &tm_st);
+	loadclock(&tm_st);
 }
 
 int

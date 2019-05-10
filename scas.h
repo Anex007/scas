@@ -20,6 +20,7 @@ void updatefocus(void);
 void updateevents(void);
 void updatetodo(void);
 void updatetime(void);
+void updateclock(int useless);
 int getstring(char* prompt, char *dest, int len);
 void focusnext(void);
 int getfocus(void);
